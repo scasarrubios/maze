@@ -37,11 +37,12 @@ var FSHADER_SOURCE =
 
 function main() {
   var canvas = document.getElementById('webgl');
+  //canvas.width = window.innerWidth-700;
+  //canvas.height = window.innerHeight-300;
 	var canvas2d = document.getElementById('2d');
 	var ctx_2d = canvas2d.getContext("2d");
   var camera = new cameraMaker();
-  var speed = 0.08; var angle = 0.25;
-  var prevX = 50; var prevY = 50;
+  var speed = 0.05; //var angle = 0.25;
   var my_maze = new Maze(MAZESZ);
   var maze_3D = new Array();
   var drawables = new Array();
@@ -138,7 +139,7 @@ function main() {
     drawables.push(walls);
     drawables.push(floor);
 
-    init(drawables);
+    init(drawables, camera, my_maze);
 
     requestAnimationFrame(function(){drawScene(camera, drawables, my_maze, ctx_2d)}, my_maze);
   }
@@ -171,27 +172,21 @@ function main() {
 
   function mouseHandler(ev){
 
-    if(ev.clientY < prevY || ev.clientY <= 50){
-      camera.roteZ(-angle);
-      prevY = ev.clientY;
-      console.log(ev.clientY)
-    }else if(ev.clientY > prevY || ev.clientY >= 400){
-      camera.roteZ(angle);
-      prevY = ev.clientY;
-    }else if(ev.clientX > prevX){
-      camera.roteXY(angle);
-      prevX = ev.clientX;
-    }else if(ev.clientX < prevX){
-      camera.roteXY(-angle);
-      prevX = ev.clientX;
-      console.log(ev.clientX)
-    }
-
+    camera.mouseX = ev.clientX;
+    camera.mouseY = ev.clientY;
   }
   
-  document.addEventListener('keydown', keyHandler, false);
+  function lookAround(){
 
-  document.addEventListener('mouseover', mouseHandler, false);
+    camera.offX = camera.mouseX - canvas.width/2;
+    camera.roteXY(camera.offX*0.007)
+    camera.offY = camera.mouseY - canvas.height/2;
+    camera.roteZ(camera.offY*0.007)
+  }
+
+  document.addEventListener('keydown', keyHandler, false);
+  document.addEventListener('mousemove', mouseHandler, false);
+  mouseInterval = setInterval(lookAround, 20)
 
 }
   
@@ -294,11 +289,16 @@ function Element(vertices, verticesNormales, coordsTexturas, indices, models, sr
 function cameraMaker(){
     this.PosX = 0;
     this.PosY = 0;
-    this.RotX = 20;
+    this.RotX = 0;
     this.RotY = 0;
     this.radsXY = 0;
     this.RotZ = 0;
     this.radsZX = 0;
+    this.offX = 0;
+    this.offY = 0;
+    this.mouseX = 0;
+    this.mouseY = 0;
+
     this.move = function(speed, camera, my_maze) {
       if(!crashed(camera, my_maze, speed)){
         this.PosX += speed * Math.cos(this.radsXY);
@@ -307,12 +307,11 @@ function cameraMaker(){
     }
     this.roteXY = function(angle) {
       this.radsXY += angle * Math.PI / 180;
-      this.RotX = Math.cos(-this.radsXY);
-      this.RotY = Math.sin(-this.radsXY);
+      this.RotX = Math.cos(-this.radsXY) * Math.cos(-this.radsZX);
+      this.RotY = Math.sin(-this.radsXY) * Math.cos(-this.radsZX);
     }
     this.roteZ = function(angle) {
       this.radsZX += angle * Math.PI / 180;
-      //this.RotX = Math.cos(-this.radsZX);
       this.RotZ = Math.sin(-this.radsZX);
     }
   };
@@ -340,25 +339,34 @@ function handleTextureLoaded(image, texture, my_maze) {
   gl.bindTexture(gl.TEXTURE_2D, null);
 }
 
-function init(drawables){
+function init(drawables, camera, my_maze){
 
   for(var i=0; i<drawables.length; i++){
     drawables[i].initBuffers()
     drawables[i].initTextures()
   }
+  var x=MAZESZ/2; var y=MAZESZ/2;
+  do {
+        camera.PosX = x;
+        camera.PosY = y;
+        x++;
+    }
+  while (x<my_maze.rooms.length && !my_maze.rooms[x][y]);
+  
 }
 
 function crashed(camera, my_maze, speed){
 
   for(var i=0; i<my_maze.rooms.length; i++){
-     for(var j=0; j<my_maze.rooms.length; j++){
-      if(!my_maze.rooms[i][j] && Math.floor(camera.PosX+speed)==i
-          && Math.floor(camera.PosY+speed)==j){
-        camera.PosX = camera.PosX-speed/4;
-        camera.PosY = camera.PosY-speed/4;
+    for(var j=0; j<my_maze.rooms.length; j++){
+      if(!my_maze.rooms[i][j] && Math.floor(camera.PosX+2*speed*camera.RotX)==i
+          && Math.floor(camera.PosY+2*speed*camera.RotY)==j){
+
         return true;
+        camera.PosX -= speed* Math.cos(camera.radsXY);
+        camera.PosY += speed* Math.sin(camera.radsXY);
       }
-     }
+    }
   }
 }
 
