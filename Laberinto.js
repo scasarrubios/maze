@@ -140,6 +140,7 @@ function main() {
     drawables.push(floor);
 
     init(drawables, camera, my_maze);
+    console.log(drawables[1].texture)
 
     requestAnimationFrame(function(){drawScene(camera, drawables, my_maze, ctx_2d)}, my_maze);
   }
@@ -224,13 +225,13 @@ function Element(vertices, verticesNormales, coordsTexturas, indices, models, sr
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, this.indices, gl.STATIC_DRAW);
 
   }
-
+  that = this;
   this.initTextures = function() {
     this.texture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, this.texture);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE,
                 new Uint8Array([0, 0, 255, 255]));
-    handleTextureLoaded(this.image, this.texture)
+    that.image.onload = function() { handleTextureLoaded(that.image, that.texture); }
   };
 
   this.draw = function(mvpMatrix, pMatrix, vMatrix){
@@ -328,7 +329,7 @@ function create3DMaze(my_maze, maze_3D){
   }
 };
 
-function handleTextureLoaded(image, texture, my_maze) {
+function handleTextureLoaded(image, texture) {
   gl.bindTexture(gl.TEXTURE_2D, texture);
   gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.MIRRORED_REPEAT);
